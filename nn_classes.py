@@ -2,9 +2,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class MNIST_NET(nn.Module):
+class MnistNet(nn.Module):
     def __init__(self):
-        super(MNIST_NET, self).__init__()
+        super(MnistNet, self).__init__()
         self.conv1 = nn.Conv2d(1, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
         self.fc1 = nn.Linear(4 * 4 * 50, 500)
@@ -21,9 +21,9 @@ class MNIST_NET(nn.Module):
         return x
 
 
-class SIMPLE_CIFAR_NET(nn.Module):
+class SimpleCifarNet(nn.Module):
     def __init__(self):
-        super(SIMPLE_CIFAR_NET, self).__init__()
+        super(SimpleCifarNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(64)
         self.pool = nn.MaxPool2d(2, 2)
@@ -52,32 +52,6 @@ class SIMPLE_CIFAR_NET(nn.Module):
         x = self.fc5(x)
         return x
 
-class SIMPLE_CIFAR_NET_NOBN(nn.Module):
-    def __init__(self):
-        super(SIMPLE_CIFAR_NET_NOBN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
-        self.conv3 = nn.Conv2d(128, 256, 3, padding=1)
-        self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
-        self.fc1 = nn.Linear(512 * 2 * 2, 128)
-        self.fc2 = nn.Linear(128, 256)
-        self.fc3 = nn.Linear(256, 512)
-        self.fc4 = nn.Linear(512, 1024)
-        self.fc5 = nn.Linear(1024, 10)
-
-    def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
-        x = self.pool(F.relu(self.conv4(x)))
-        x = x.view(-1, 512 * 2 * 2)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = F.relu(self.fc4(x))
-        x = self.fc5(x)
-        return x
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -164,9 +138,29 @@ class ResNet(nn.Module):
         out = self.linear(out)
         return out
 
+def get_mnistnet():
+    return MnistNet()
 
-def ResNet18():
-    return ResNet(BasicBlock, [2,2,2,2])
+def get_simple_cifar_net():
+    return SimpleCifarNet()
+def get_resnet18():
+    return ResNet(BasicBlock, [2, 2, 2, 2])
 
 def ResNet34():
-    return ResNet(BasicBlock, [3,4,6,3])
+    return ResNet(BasicBlock, [3, 4, 6, 3])
+
+def get_net(args):
+
+    name = args.nn_name
+    if name == 'mnist':
+        model = get_mnistnet()
+    elif name == 'fmnist':
+        model = get_mnistnet()
+    elif name == 'simplecifar':
+        model = get_simple_cifar_net()
+    elif name == 'resnet18':
+        model = get_resnet18()
+    else:
+        raise ValueError('NN model can only be mnist, fmnist, simplecifar, resnet18',
+                         'Be sure that NN model is compatible with the dataset')
+    return model
