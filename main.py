@@ -23,7 +23,7 @@ if __name__ == '__main__':
     if not os.path.exists(os.getcwd() + '/Results'):
         os.mkdir(os.getcwd() + '/Results')
     n_path = os.path.join(os.getcwd(), 'Results', newFile)
-    for i in range(5):
+    for i in range(6):
         accs = train(args, device)
         if i == 0:
             os.mkdir(n_path)
@@ -35,9 +35,9 @@ if __name__ == '__main__':
                 f.write(line + '\n')
             f.write('############ Results ###############' + '\n')
             f.close()
-        s_loc = date+'-Q-TimeCorralated'+'-numW-'+str(args.num_client)+'startingLR-'+str(args.lr)+'--'+str(i)
+        s_loc = date+'MajorityVoting-Grad'+'-startingLR-'+str(args.lr)+'--'+str(i)
         s_loc = os.path.join(n_path,s_loc)
         np.save(s_loc,accs)
-        f = open(n_path + '/simulation_Details.txt', 'w+')
+        f = open(n_path + '/simulation_Details.txt', 'a+')
         f.write('Trial ' + str(i) + ' results at ' + str(accs[args.num_epoch]) + '\n')
         f.close()

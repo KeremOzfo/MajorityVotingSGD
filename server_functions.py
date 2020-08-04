@@ -139,7 +139,6 @@ def make_sparse_grad(grad_flat, sparsity_window,device):
     return None
 
 def adjust_learning_rate(optimizer, epoch,lr_change, lr):
-    """Sets the learning rate to the initial LR decayed by 10 every 50 epochs"""
 
     lr_change = np.asarray(lr_change)
     loc = np.where(lr_change == epoch)[0][0] +1
@@ -148,11 +147,20 @@ def adjust_learning_rate(optimizer, epoch,lr_change, lr):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-def get_LR(epoch, lr,lr_change):
-    if epoch in lr_change:
-        lr_change = np.asarray(lr_change)
-        loc = np.where(lr_change == epoch)[0][0] + 1
-        lr *= (0.1 ** loc)
+def lr_warm_up(optimizers, num_workers, epoch,start_lr):
+    for cl in range(num_workers):
+        for param_group in optimizers[cl].param_groups:
+            if epoch == 0:
+                param_group['lr'] = 0.1
+            else:
+                lr_change = (start_lr - 0.1) / 4
+                param_group['lr'] = (lr_change * epoch) + 0.1
+
+
+def get_LR(optimizer):
+    lr =None
+    for param_group in optimizer.param_groups:
+        lr = param_group['lr']
     return lr
 
 
@@ -184,31 +192,66 @@ def groups(grad_flat, group_len,denominator,device):
     grad_flat *= 0
     grad_flat[ind] = newVals
 
-def collectMojority(grad_flat,majority_pool,layer_majority, total_majorty,ind_pairs,random,device):
+
+
+def collectMajority_grad(grad_flat,majority_pool,layer_majority, total_majorty,ind_pairs,random,mode,device):
     clone_grad = torch.clone(grad_flat).to(device)
     majority_len = math.ceil(grad_flat.numel() / total_majorty)
     inds = torch.empty(0).to(device)
+    vals = torch.empty(0).to(device)
     if layer_majority > 0:
         for layer in ind_pairs:
             startPoint = (layer[0])
             endPoint = (layer[1])
             layer_len = endPoint - startPoint
             l_top_k = math.ceil(layer_len / layer_majority)
-            l_ind = torch.topk((grad_flat[startPoint:endPoint]).abs(), k=l_top_k, dim=0)[1]
+            l_val, l_ind = torch.topk((grad_flat[startPoint:endPoint]).abs(), k=l_top_k, dim=0)
             l_ind.add_(startPoint)
             inds = torch.cat((inds.float(), l_ind.float()), 0)
+            vals = torch.cat((vals.float(),l_val.float()), 0)
         inds = inds.long()
         clone_grad[inds] = 0
     inds = inds.long()
     if inds.numel() < majority_len:
         topk = majority_len - inds.numel()
-        inds_ = torch.topk(clone_grad.abs(), k=topk, dim=0)[1]
-        inds = torch.cat((inds,inds_),0)
+        vals_, inds_ = torch.topk(clone_grad.abs(), k=topk, dim=0)
+        inds = torch.cat((inds,inds_), 0)
+        vals = torch.cat((vals, vals_), 0)
+    clone_grad *= 0
+    clone_grad[inds] = vals
+    vals, inds = torch.topk(clone_grad.abs(), k=majority_len, dim=0) ## reorder vals and inds
     if random >0:
         random_select = math.ceil(inds.numel()/random)
         inds = inds.cpu().numpy()
-        inds = np.random.choice(inds,random_select)
+        inds = np.random.choice(inds,random_select) ## randomly select
         inds = torch.tensor(inds)
-        inds.to(device)
-    majority_pool[inds] +=1
+        inds = inds.to(device) # send to cuda again
+        vals = clone_grad[inds] # get corresponding values
+    majority_pool[inds] += 1 ## make normal Majority-V for all ind Values
+    if mode !=0:
+        for i in range(3):
+            gValue = vals[0] / ((3-i)**2) # make Weighted Majority-V starting from lowest group bound
+            mask = vals.ge(gValue)
+            majority_pool[torch.masked_select(inds,mask)] += 1
     return None
+
+def worker_voting(prev_mask, worker_grad, sparsity, k_val, device):
+    sparse_val = math.ceil(worker_grad.numel() / sparsity)
+    k_sparse = math.ceil(worker_grad.numel() / k_val)
+    w_val, w_inds = torch.topk(worker_grad.abs(), k = sparse_val, dim=0)
+    worker_top = torch.zeros_like(worker_grad).to(device)
+    worker_top[w_inds] = 1
+    m_drop = worker_top.mul(prev_mask)
+    #print(torch.sum(m_drop), torch.sum(prev_mask))
+    m_drop = prev_mask.sub(1, m_drop)
+    #print(torch.sum(m_drop))
+    m_Atarget = worker_top.sub(1, worker_top.mul(prev_mask))
+    m_dropCount = torch.sum(m_drop).__int__()
+    if m_dropCount < k_sparse:
+        k_sparse = m_dropCount
+    m_dropTarget = worker_grad.mul(m_drop)
+    drop_val, drop_ind = torch.topk(m_dropTarget.abs(), k=sparse_val, dim=0)
+    drop_mask = drop_val > 0
+    drop_ind = torch.flip(torch.masked_select(drop_ind, drop_mask), dims=[0])
+    add_val , add_ind = torch.topk((worker_grad.mul(m_Atarget)).abs(), k=k_sparse, dim=0)
+    return add_ind, drop_ind[0:k_sparse]
