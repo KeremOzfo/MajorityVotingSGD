@@ -10,9 +10,8 @@ device = torch.device("cpu")
 args = args_parser()
 
 if __name__ == '__main__':
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device(f"cuda:{args.gpu_id}" if torch.cuda.is_available() else "cpu")
     simulation_ID = int(random.uniform(1,999))
-    print('device:',device)
     args = args_parser()
     for arg in vars(args):
        print(arg, ':', getattr(args, arg))
@@ -24,7 +23,7 @@ if __name__ == '__main__':
         os.mkdir(os.getcwd() + '/Results')
     n_path = os.path.join(os.getcwd(), 'Results', newFile)
     for i in range(6):
-        accs = train(args, device)
+        accs = train_vanilla(args, device)
         if i == 0:
             os.mkdir(n_path)
             f = open(n_path + '/simulation_Details.txt', 'w+')
@@ -35,7 +34,7 @@ if __name__ == '__main__':
                 f.write(line + '\n')
             f.write('############ Results ###############' + '\n')
             f.close()
-        s_loc = date+'MajorityVoting-Grad'+'-startingLR-'+str(args.lr)+'--'+str(i)
+        s_loc = date+'MajorityVoting-Vanilla'+'-startingLR-'+str(args.lr)+'--'+str(i)
         s_loc = os.path.join(n_path,s_loc)
         np.save(s_loc,accs)
         f = open(n_path + '/simulation_Details.txt', 'a+')
