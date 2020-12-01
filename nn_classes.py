@@ -254,7 +254,11 @@ def get_resnet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
 
 def ResNet34():
-    return ResNet(BasicBlock, [3, 4, 6, 3])
+    return ResNet(BasicBlock, [3, 4, 6, 3],num_classes=100)
+
+def ResNet50():
+    return ResNet(Bottleneck, [3, 4, 6, 3],num_classes=100)
+
 
 def get_net(args):
 
@@ -269,6 +273,10 @@ def get_net(args):
         model = get_simple_cifar_net_nobn()
     elif name == 'resnet18':
         model = get_resnet18()
+    elif name == 'resnet34':
+        model = ResNet34()
+    elif name == 'resnet50':
+        model = ResNet50()
     elif name == 'vgg11_nobn':
         model = vgg11()
     else:

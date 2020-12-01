@@ -61,6 +61,27 @@ def get_cifar10_dataset():
 
     return trainset, testset
 
+def get_cifar100_dataset():
+    """returns trainset and testsets for Fashion CIFAR10 dataset"""
+
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
+    ])
+
+    # Normalize test set same as training set without augmentation
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.507, 0.487, 0.441], std=[0.267, 0.256, 0.276])
+    ])
+
+    trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
+    testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
+
+    return trainset, testset
+
 
 def get_dataset(args):
 
