@@ -1,7 +1,25 @@
 import torch.nn as nn
 import torch.nn.functional as F
+import math
 
+class MnistNet(nn.Module):
+    def __init__(self):
+        super(MnistNet, self).__init__()
+        self.conv1 = nn.Conv2d(1, 10, 5, 1)
+        self.conv2 = nn.Conv2d(10, 30, 5, 1)
+        self.fc1 = nn.Linear(4 * 4 * 30, 100)
+        self.fc2 = nn.Linear(100, 10)
 
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = x.view(-1, 4 * 4 * 30)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+'''
 class MnistNet(nn.Module):
     def __init__(self):
         super(MnistNet, self).__init__()
@@ -19,7 +37,7 @@ class MnistNet(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
-
+'''
 
 class SimpleCifarNet(nn.Module):
     def __init__(self):
@@ -44,6 +62,33 @@ class SimpleCifarNet(nn.Module):
         x = self.pool(F.relu(self.bn2(self.conv2(x))))
         x = self.pool(F.relu(self.bn3(self.conv3(x))))
         x = self.pool(F.relu(self.bn4(self.conv4(x))))
+        x = x.view(-1, 512 * 2 * 2)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        x = F.relu(self.fc4(x))
+        x = self.fc5(x)
+        return x
+    
+class SimpleCifarNetNoBN(nn.Module):
+    def __init__(self):
+        super(SimpleCifarNetNoBN, self).__init__()
+        self.conv1 = nn.Conv2d(3, 64, 3, padding=1)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv3 = nn.Conv2d(128, 256, 3, padding=1)
+        self.conv4 = nn.Conv2d(256, 512, 3, padding=1)
+        self.fc1 = nn.Linear(512 * 2 * 2, 128)
+        self.fc2 = nn.Linear(128, 256)
+        self.fc3 = nn.Linear(256, 512)
+        self.fc4 = nn.Linear(512, 1024)
+        self.fc5 = nn.Linear(1024, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv3(x)))
+        x = self.pool(F.relu(self.conv4(x)))
         x = x.view(-1, 512 * 2 * 2)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
@@ -138,11 +183,73 @@ class ResNet(nn.Module):
         out = self.linear(out)
         return out
 
+class VGG(nn.Module):
+    '''
+    VGG model
+    '''
+    def __init__(self, features):
+        super(VGG, self).__init__()
+        self.features = features
+        self.classifier = nn.Sequential(
+            nn.Linear(256, 256),
+            nn.ReLU(True),
+            nn.Linear(256, 256),
+            nn.ReLU(True),
+            nn.Linear(256, 10),
+        )
+         # Initialize weights
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                m.bias.data.zero_()
+
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
+
+
+def make_layers_vgg(cfg, batch_norm=False):
+    layers = []
+    in_channels = 3
+    for v in cfg:
+        if v == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+        else:
+            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
+            if batch_norm:
+                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+            else:
+                layers += [conv2d, nn.ReLU(inplace=True)]
+            in_channels = v
+    return nn.Sequential(*layers)
+
+
+cfg = {
+    'A': [32, 'M', 64, 'M', 128, 128, 'M', 256, 256, 'M', 256, 256, 'M'],
+    'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
+    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M',
+          512, 512, 512, 512, 'M'],
+}
+
+
+def vgg11():
+    """VGG 11-layer model (configuration "A")"""
+    return VGG(make_layers_vgg(cfg['A']))
+
 def get_mnistnet():
     return MnistNet()
 
 def get_simple_cifar_net():
     return SimpleCifarNet()
+
+def get_simple_cifar_net_nobn():
+    return SimpleCifarNetNoBN()
+
 def get_resnet18():
     return ResNet(BasicBlock, [2, 2, 2, 2])
 
@@ -158,8 +265,12 @@ def get_net(args):
         model = get_mnistnet()
     elif name == 'simplecifar':
         model = get_simple_cifar_net()
+    elif name == 'simplecifar_nobn':
+        model = get_simple_cifar_net_nobn()
     elif name == 'resnet18':
         model = get_resnet18()
+    elif name == 'vgg11_nobn':
+        model = vgg11()
     else:
         raise ValueError('NN model can only be mnist, fmnist, simplecifar, resnet18',
                          'Be sure that NN model is compatible with the dataset')

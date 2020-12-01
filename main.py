@@ -12,18 +12,18 @@ args = args_parser()
 if __name__ == '__main__':
     device = torch.device(f"cuda:{args.gpu_id}" if torch.cuda.is_available() else "cpu")
     simulation_ID = int(random.uniform(1,999))
+    print('device:',device)
     args = args_parser()
     for arg in vars(args):
        print(arg, ':', getattr(args, arg))
-    results = []
     x = datetime.datetime.now()
     date = x.strftime('%b') + '-' + str(x.day)
     newFile = date + '-sim_ID-' + str(simulation_ID)
     if not os.path.exists(os.getcwd() + '/Results'):
         os.mkdir(os.getcwd() + '/Results')
     n_path = os.path.join(os.getcwd(), 'Results', newFile)
-    for i in range(6):
-        accs = train_vanilla(args, device)
+    for i in range(5):
+        accs, loss = train(args, device)
         if i == 0:
             os.mkdir(n_path)
             f = open(n_path + '/simulation_Details.txt', 'w+')
@@ -34,9 +34,12 @@ if __name__ == '__main__':
                 f.write(line + '\n')
             f.write('############ Results ###############' + '\n')
             f.close()
-        s_loc = date+'MajorityVoting-Vanilla'+'-startingLR-'+str(args.lr)+'--'+str(i)
+        s_loc = date + f'federated_avg_acc{args.alfa}' + '--' + str(i)
+        s_loc2 = date + f'federated_avg_loss{args.alfa}' + '--' + str(i)
         s_loc = os.path.join(n_path,s_loc)
+        s_loc2 = os.path.join(n_path, s_loc2)
         np.save(s_loc,accs)
+        np.save(s_loc2, loss)
         f = open(n_path + '/simulation_Details.txt', 'a+')
-        f.write('Trial ' + str(i) + ' results at ' + str(accs[args.num_epoch]) + '\n')
+        f.write('Trial ' + str(i) + ' results at ' + str(accs[len(accs)-1]) + '\n')
         f.close()
