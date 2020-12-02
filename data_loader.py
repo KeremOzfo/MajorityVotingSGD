@@ -79,7 +79,6 @@ def get_cifar100_dataset():
 
     trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
-
     return trainset, testset
 
 
@@ -93,6 +92,8 @@ def get_dataset(args):
         trainset, testset = get_fmnist_dataset()
     elif dataset_name == 'cifar10':
         trainset, testset = get_cifar10_dataset()
+    elif dataset_name == 'cifar100':
+        trainset, testset = get_cifar100_dataset()
     else:
         raise ValueError('dataset name can only be mnist, fmnist or cifar10')
 
@@ -120,6 +121,9 @@ def get_non_iid_index(trainset, args):
         num_samples = trainset.train_labels.shape[0]
         labels = trainset.train_labels.numpy()
     elif args.dataset_name == 'cifar10':
+        labels = trainset.targets
+        num_samples = len(labels)
+    elif args.dataset_name == 'cifar100':
         labels = trainset.targets
         num_samples = len(labels)
 
@@ -183,6 +187,9 @@ def get_iid_index(trainset, args):
         num_samples = trainset.train_labels.shape[0]
         labels = trainset.train_labels.numpy()
     elif args.dataset_name == 'cifar10':
+        labels = trainset.targets
+        num_samples = len(labels)
+    elif args.dataset_name == 'cifar100':
         labels = trainset.targets
         num_samples = len(labels)
     num_sample_perworker = int(num_samples / args.num_client)
