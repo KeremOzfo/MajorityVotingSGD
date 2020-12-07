@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 from os import *
 import math
 from itertools import cycle
+import matplotlib
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 def special_adress():
     adress=[]
@@ -83,6 +85,49 @@ def graph(data, legends,interval):
     plt.grid(True)
     plt.show()
 
+def graph2(data, legends,interval):
+    marker = ['s', 'v', '+', 'o', '*']
+    linestyle = ['-', '--', '-.', ':']
+    linecycler = cycle(linestyle)
+    markercycler = cycle(marker)
+    fig, ax = plt.subplots()
+    for d, legend in zip(data, legends):
+        x_axis = []
+        l = next(linecycler)
+        m = next(markercycler)
+        for i in range(0, len(d)):
+            x_axis.append(i * interval)
+        ax.plot(x_axis, d, marker=m, linestyle=l, markersize=2, label=legend)
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Accuracy')
+    ax.set_ylim([65, 70])
+    ax.grid(True)
+    ax.legend()
+
+    axins1 = zoomed_inset_axes(ax, zoom=2, loc=7)
+
+    for d, legend in zip(data, legends):
+        x_axis = []
+        l = next(linecycler)
+        m = next(markercycler)
+        for i in range(0, len(d)):
+            x_axis.append(i * interval)
+        axins1.plot(x_axis, d)
+    axins1.grid(True)
+    ax.plot()
+
+    # SPECIFY THE LIMITS
+    x1, x2, y1, y2 = 190, 200, 68.8, 69.8
+    axins1.set_xlim(x1, x2)
+    axins1.set_ylim(y1, y2)
+    # IF SET TO TRUE, TICKS ALONG
+    # THE TWO AXIS WILL BE VISIBLE
+    plt.xticks(visible=False)
+    plt.yticks(visible=False)
+
+    mark_inset(ax, axins1, loc1=1, loc2=2, fc="none", ec="0.2")
+    plt.draw()
+    plt.show()
 
 
 def concateresults(dirsets):
@@ -109,6 +154,6 @@ intervels = 1
 labels = special_adress()[1]
 results = concateresults(special_adress()[0])
 #results = concateresults(locations)
-graph(results,labels,intervels)
+graph2(results,labels,intervels)
 #data,legends = compile_results(loc)
 #graph(data,labels,intervels)
