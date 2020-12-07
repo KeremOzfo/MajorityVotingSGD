@@ -49,7 +49,7 @@ def train_vanilla(args, device):
 
     net_sizes, net_nelements = sf.get_model_sizes(net_ps)
     ind_pairs = sf.get_indices(net_sizes, net_nelements)
-    N_s = (50000 if args.dataset_name == 'cifar10' else 60000)
+    N_s = 50000
     modelsize = sf.count_parameters(net_ps)
     layer_types = []
     for p in net_ps.named_parameters():

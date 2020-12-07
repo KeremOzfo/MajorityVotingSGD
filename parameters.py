@@ -3,7 +3,7 @@ import argparse
 
 def args_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--gpu_id', type=int, default=1, help='cuda:No')
+    parser.add_argument('--gpu_id', type=int, default=0, help='cuda:No')
     parser.add_argument('--MajorityType',type=str, default='vanilla', help='vanilla, add_drop, random')
 
     # dataset related
@@ -28,7 +28,7 @@ def args_parser():
     parser.add_argument('--type', type=int, default=0, help='0 for MajorityVoting, 1 for Weighted-MV')
 
     # Quantization params
-    parser.add_argument('--quantization', type=bool, default=True,help='apply quantization or not')
+    parser.add_argument('--quantization', type=bool, default=False,help='apply quantization or not')
     parser.add_argument('--num_groups', type=int, default=8, help='Number Of groups')
     args = parser.parse_args()
     return args

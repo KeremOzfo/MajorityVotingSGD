@@ -8,31 +8,31 @@ from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes
 def special_adress():
     adress=[]
     adress_loss = []
-    labels = ['\u03B1=0.85', '\u03B1=0.90', '\u03B1=0.95','\u03B1=1']
+    labels = ['SSGD-MV-AD-L1', 'SSGD-MV-AD-L2','SSGD-MV-AD-L2-Q','SSGD-TopK']
 
 
-    adress.append('Results/85/acc')
-    adress.append('Results/90/acc')
-    adress.append('Results/95/acc')
-    adress.append('Results/100/acc')
+    adress.append('Results/add_drop_H_1')
+    adress.append('Results/add_drop_H_2')
+    adress.append('Results/add_drop_H_2-Q')
+    # adress.append('Results/vanilla_H_1')
+    # adress.append('Results/vanilla_H_2')
+    adress.append('Results/topK')
 
-    adress_loss.append('Results/85/loss')
-    adress_loss.append('Results/90/loss')
-    adress_loss.append('Results/95/loss')
-    adress_loss.append('Results/100/loss')
-    return adress,adress_loss,labels
+    return adress,labels
 
 def compile_results(adress):
     results = None
     f_results = []
+    total_len = len(listdir(adress)) -1
     for i, dir in enumerate(listdir(adress)):
-        vec = np.load(adress + '/'+dir)
-        final_result = vec[len(vec)-1]
-        f_results.append(final_result)
-        if i==0:
-            results = vec/len(listdir(adress))
-        else:
-           results += vec/len(listdir(adress))
+        if dir[0:3] !='sim':
+            vec = np.load(adress + '/'+dir)
+            final_result = vec[len(vec)-1]
+            f_results.append(final_result)
+            if i==0:
+                results = vec/total_len
+            else:
+               results += vec/total_len
     avg = np.average(f_results)
     st_dev = np.std(f_results)
     return results, [adress,avg,st_dev]
@@ -75,29 +75,10 @@ def graph(data, legends,interval):
     #plt.axis([145,155,88,92])
     #plt.axis([290, 300, 87, 95])
     #plt.axis([50, 100, 87, 95])
-    plt.axis([0, 300, 85, 95])
+    plt.axis([0, 200, 65, 70])
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
     #plt.title('Majority Voting')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
-
-def graph_loss(data, legends, interval):
-    marker = ['s', 'v', '+', 'o', '*']
-    linestyle = ['-', '--', '-.', ':']
-    linecycler = cycle(linestyle)
-    markercycler = cycle(marker)
-    for d, legend in zip(data, legends):
-        x_axis = []
-        l = next(linecycler)
-        m = next(markercycler)
-        for i in range(0, len(d)):
-            x_axis.append(i * interval)
-        plt.plot(x_axis, d, marker=m, linestyle=l, markersize=2, label=legend)
-    plt.axis([0, 300, 0, 2])
-    plt.xlabel('Epoch')
-    plt.ylabel('Training Loss')
     plt.legend()
     plt.grid(True)
     plt.show()
@@ -125,12 +106,9 @@ for tpye in types:
         labels.append(tpye +'--'+ nn)
 
 intervels = 1
-labels = special_adress()[2]
+labels = special_adress()[1]
 results = concateresults(special_adress()[0])
-results_loss = concateresults(special_adress()[1])
-print(results_loss)
 #results = concateresults(locations)
 graph(results,labels,intervels)
-graph_loss(results_loss,labels,intervels)
 #data,legends = compile_results(loc)
 #graph(data,labels,intervels)
